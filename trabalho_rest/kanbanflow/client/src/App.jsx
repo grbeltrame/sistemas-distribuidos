@@ -1,122 +1,102 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useEffect } from 'react';
+import { api } from './services/api';
+import Board from './components/Board';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [boards, setBoards] = useState([]);
+  const [selectedBoard, setSelectedBoard] = useState(null);
+  const [newBoardTitle, setNewBoardTitle] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    api.getBoards().then(setBoards);
+  }, []);
+
+  const handleCreateBoard = async () => {
+    if (!newBoardTitle.trim()) return;
+    const board = await api.createBoard(newBoardTitle);
+    setBoards([...boards, board]);
+    setNewBoardTitle('');
+    setAdding(false);
+  };
+
+  const handleSelectBoard = async (id) => {
+    const board = await api.getBoard(id);
+    setSelectedBoard(board);
+  };
+
+  const handleDeleteBoard = async (e, id) => {
+    e.stopPropagation();
+    await api.deleteBoard(id);
+    setBoards(boards.filter(b => b.id !== id));
+  };
+
+  if (selectedBoard) {
+    return <Board board={selectedBoard} onBack={() => setSelectedBoard(null)} />;
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div style={{ minHeight: '100vh', backgroundColor: '#0052cc', padding: '32px' }}>
+      <h1 style={{ color: '#fff', marginBottom: '32px' }}>KanbanFlow</h1>
 
-      <div className="ticks"></div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-start' }}>
+        {boards.map(board => (
+          <div
+            key={board.id}
+            onClick={() => handleSelectBoard(board.id)}
+            style={{
+              backgroundColor: '#0747a6',
+              borderRadius: '8px',
+              padding: '16px',
+              width: '200px',
+              cursor: 'pointer',
+              color: '#fff',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+            }}
+          >
+            <strong>{board.title}</strong>
+            <button
+              onClick={(e) => handleDeleteBoard(e, board.id)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', fontSize: '16px' }}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {adding ? (
+          <div style={{ backgroundColor: '#ebecf0', borderRadius: '8px', padding: '12px', width: '200px' }}>
+            <input
+              autoFocus
+              value={newBoardTitle}
+              onChange={e => setNewBoardTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleCreateBoard(); if (e.key === 'Escape') setAdding(false); }}
+              placeholder="Título do board"
+              style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <button onClick={handleCreateBoard} style={{ backgroundColor: '#0052cc', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer' }}>
+                Criar
+              </button>
+              <button onClick={() => setAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAdding(true)}
+            style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '8px', padding: '16px', width: '200px', cursor: 'pointer', color: '#fff', textAlign: 'left' }}
+          >
+            + Criar board
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
